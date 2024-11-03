@@ -2,8 +2,12 @@
 
 namespace Core.Actions
 {
-    public class JumpAction : IAction
+    public class SprintAction : IAction
     {
+        public bool IsSprint { get; }
+
+        public SprintAction(bool isSprint) => IsSprint = isSprint;
+
         public void Accept(IActionExecutor executor)
         {
             executor.Visit(this);

@@ -9,6 +9,6 @@ namespace Core.Actions
             executor.Visit(this);
         }
 
-        public float GetElapsedTime() => 0.00001f;
+        public float GetElapsedTime() => 0;
     }
 }

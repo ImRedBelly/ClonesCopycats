@@ -35,12 +35,17 @@ namespace Core.Characters
                 {
                     float elapsedTime = 0f;
                     float actionDuration = action.GetElapsedTime();
-
-                    while (elapsedTime < actionDuration)
-                    {
+                   
+                    if (actionDuration == 0)
                         action.Accept(_executor);
-                        await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
-                        elapsedTime += Time.deltaTime;
+                    else
+                    {
+                        while (elapsedTime < actionDuration)
+                        {
+                            action.Accept(_executor);
+                            await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
+                            elapsedTime += Time.deltaTime;
+                        }
                     }
                 }
             }

@@ -17,7 +17,10 @@ namespace Core.Characters
         private InputHandler _inputHandler;
         private ActionExecutor _executor;
 
-        private MoveAction _cachedMoveAction;
+        private DelayEmptyAction _cachedDelayEmptyAction;
+        private float _cachedDirection;
+        private bool _cachedIsSprint;
+
         private float _lastActionTime;
 
         public void Initialize(InputHandler inputHandler)
@@ -25,19 +28,13 @@ namespace Core.Characters
             _inputHandler = inputHandler;
             _executor = new ActionExecutor(rigidbody, spriteRenderer, speed, jumpForce);
 
+            _cachedDelayEmptyAction = new DelayEmptyAction(0);
+            _lastActionTime = Time.time;
+
             _inputHandler.Move += OnMove;
             _inputHandler.ClickedJump += OnClickedJump;
+            _inputHandler.ClickedSprint += OnClickedSprint;
             _inputHandler.ClickedChangeColor += OnClickedChangeColor;
-        }
-
-        private void OnDisable()
-        {
-            if (_inputHandler != null)
-            {
-                _inputHandler.Move -= OnMove;
-                _inputHandler.ClickedJump -= OnClickedJump;
-                _inputHandler.ClickedChangeColor -= OnClickedChangeColor;
-            }
         }
 
         public void ResetPlayer(Transform startPoint)
@@ -46,55 +43,73 @@ namespace Core.Characters
             transform.position = startPoint.position;
         }
 
-        private void OnMove(float direction, bool isSprint)
+        private void OnDisable()
         {
-            float elapsedTime = Time.time - _lastActionTime;
-            if (_cachedMoveAction == null || !Mathf.Approximately(_cachedMoveAction.Direction, direction) || _cachedMoveAction.IsSprint != isSprint)
+            if (_inputHandler != null)
             {
-                if (_cachedMoveAction != null)
-                {
-                    _cachedMoveAction.SetElapsedTime(elapsedTime);
-                    Actions.Add(_cachedMoveAction);
-                }
-
-                _cachedMoveAction = new MoveAction(direction, isSprint);
-                _lastActionTime = Time.time;
+                _inputHandler.Move -= OnMove;
+                _inputHandler.ClickedJump -= OnClickedJump;
+                _inputHandler.ClickedSprint -= OnClickedSprint;
+                _inputHandler.ClickedChangeColor -= OnClickedChangeColor;
             }
+        }
 
-            _executor.Visit(_cachedMoveAction);
+        private void Update() => _executor.Visit(_cachedDelayEmptyAction);
+
+        private void OnMove(float direction)
+        {
+            if (!Mathf.Approximately(_cachedDirection, direction))
+            {
+                AddDelayEmptyAction();
+                var moveAction = new MoveAction(direction);
+
+                _cachedDirection = direction;
+                _executor.Visit(moveAction);
+                Actions.Add(moveAction);
+            }
         }
 
         private void OnClickedJump()
         {
             if (Mathf.Abs(rigidbody.velocity.y) < 0.001f)
             {
-                AddCachedMoveAction();
+                AddDelayEmptyAction();
+
                 var jumpAction = new JumpAction();
                 _executor.Visit(jumpAction);
                 Actions.Add(jumpAction);
+            }
+        }
 
-                _cachedMoveAction = new MoveAction(0, false);
-                _lastActionTime = Time.time;
+        private void OnClickedSprint(bool isClickedSprint)
+        {
+            if (_cachedIsSprint != isClickedSprint)
+            {
+                AddDelayEmptyAction();
+
+                var sprintAction = new SprintAction(isClickedSprint);
+
+                _cachedIsSprint = isClickedSprint;
+                _executor.Visit(sprintAction);
+                Actions.Add(sprintAction);
             }
         }
 
         private void OnClickedChangeColor()
         {
-            AddCachedMoveAction();
+            AddDelayEmptyAction();
+
             var changeColorAction = new ChangeColorAction();
             _executor.Visit(changeColorAction);
-            Actions.Add(new ChangeColorAction());
-            _cachedMoveAction = new MoveAction(0, false);
-            _lastActionTime = Time.time;
+            Actions.Add(changeColorAction);
         }
 
-        private void AddCachedMoveAction()
+        private void AddDelayEmptyAction()
         {
-            if (_cachedMoveAction != null)
-            {
-                _cachedMoveAction.SetElapsedTime(Time.time - _lastActionTime);
-                Actions.Add(_cachedMoveAction);
-            }
+            var delayTime = Time.time - _lastActionTime;
+            Actions.Add(new DelayEmptyAction(delayTime));
+
+            _lastActionTime = Time.time;
         }
     }
 }

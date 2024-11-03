@@ -9,6 +9,8 @@ namespace Core.Executors
         private readonly SpriteRenderer _spriteRenderer;
         private readonly float _speed;
         private readonly float _jumpForce;
+
+        private float _moveDirection;
         private float _sprintAppendSpeed;
 
         private const float AdditionalSprintSpeed = 15;
@@ -21,15 +23,26 @@ namespace Core.Executors
             _jumpForce = jumpForce;
         }
 
+
+        public void Visit(DelayEmptyAction delayEmptyAction)
+        {
+            _rigidbody.velocity = new Vector2(_moveDirection * (_speed + _sprintAppendSpeed), _rigidbody.velocity.y);
+        }
+
         public void Visit(MoveAction moveAction)
         {
-            _sprintAppendSpeed = moveAction.IsSprint ? AdditionalSprintSpeed : 0;
-            _rigidbody.velocity = new Vector2(moveAction.Direction * (_speed + _sprintAppendSpeed), _rigidbody.velocity.y);
+            _rigidbody.velocity = Vector2.zero;
+            _moveDirection = moveAction.Direction;
         }
 
         public void Visit(JumpAction jumpAction)
         {
             _rigidbody.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
+        }
+
+        public void Visit(SprintAction sprintAction)
+        {
+            _sprintAppendSpeed = sprintAction.IsSprint ? AdditionalSprintSpeed : 0;
         }
 
         public void Visit(ChangeColorAction changeColorAction)
